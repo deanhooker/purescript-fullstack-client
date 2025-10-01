@@ -7,8 +7,11 @@ You can edit this file as you like.
   [ "console"
   , "effect"
   , "halogen"
+  , "maybe"
   , "prelude"
   , "psci-support"
+  , "routing"
+  , "routing-duplex"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
