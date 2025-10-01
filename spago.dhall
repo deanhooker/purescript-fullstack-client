@@ -6,9 +6,12 @@ You can edit this file as you like.
 , dependencies =
   [ "aff"
   , "console"
+  , "const"
+  , "css"
   , "datetime"
   , "effect"
   , "halogen"
+  , "halogen-css"
   , "maybe"
   , "newtype"
   , "now"
