@@ -14,6 +14,7 @@ You can edit this file as you like.
   , "halogen-css"
   , "maybe"
   , "newtype"
+  , "nonempty"
   , "now"
   , "prelude"
   , "psci-support"
