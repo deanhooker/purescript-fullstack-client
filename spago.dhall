@@ -11,6 +11,7 @@ You can edit this file as you like.
   , "halogen"
   , "maybe"
   , "newtype"
+  , "now"
   , "prelude"
   , "psci-support"
   , "refs"

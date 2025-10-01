@@ -12,6 +12,7 @@ data Route
   = Logon
   | Logoff
   | Users (Maybe String)
+  | ChangePassword
 
 derive instance genericRoute :: Generic Route _
 
@@ -20,4 +21,5 @@ routeCodec = root $ sum
   { "Logon": path "logon" noArgs
   , "Logoff": path "logoff" noArgs
   , "Users": "users" / optional segment
+  , "ChangePassword": path "change-password" noArgs
   }

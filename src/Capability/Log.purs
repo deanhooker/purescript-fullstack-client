@@ -4,9 +4,15 @@ import Prelude
 
 import Control.Monad.Trans.Class (lift)
 import Data.DateTime (DateTime)
+import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
 import Halogen (HalogenM)
 
 data LogLevel = Debug | Info | Warning | Error
+
+derive instance genericLogLevel :: Generic LogLevel _
+instance showLogLevel :: Show LogLevel where
+  show = genericShow
 
 type LogEntry =
   { level :: LogLevel
