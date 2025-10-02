@@ -9,6 +9,7 @@ You can edit this file as you like.
   , "const"
   , "css"
   , "datetime"
+  , "dom-indexed"
   , "effect"
   , "halogen"
   , "halogen-css"
@@ -21,6 +22,7 @@ You can edit this file as you like.
   , "refs"
   , "routing"
   , "routing-duplex"
+  , "strings"
   , "transformers"
   , "uuid"
   ]

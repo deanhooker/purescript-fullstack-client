@@ -2,16 +2,16 @@ module Component.Page where
 
 import Prelude
 
-import CSS (CSS)
+import AppTheme (themeColor, paperColor, themeFont)
 import CSS as CSS
 import CSS.Background (backgroundColor)
 import CSS.Box (boxShadow)
-import CSS.Color (Color, rgba, rgb, white)
+import CSS.Color (rgba, white)
 import CSS.Common (center)
 import CSS.Cursor (cursor, pointer)
 import CSS.Display (display, zIndex, position, fixed, flex)
 import CSS.Flexbox (flexDirection, row, flexStart, flexEnd, flexBasis, flexShrink, flexGrow, alignItems, justifyContent)
-import CSS.Font ( FontWeight(..), sansSerif, fontFamily, color, fontSize, fontWeight)
+import CSS.Font ( FontWeight(..), color, fontSize, fontWeight)
 import CSS.Geometry ( padding, paddingTop, paddingLeft, paddingRight, width, height, minHeight)
 import CSS.Property (value)
 import CSS.Size (rem, px, pct, vh)
@@ -19,7 +19,6 @@ import CSS.Text (letterSpacing)
 import CSS.Text.Shadow (textShadow)
 import Capability.Navigate (class Navigate, navigate)
 import Data.Maybe (Maybe(..))
-import Data.NonEmpty ((:|))
 import Data.Route (Route)
 import Data.Route as Route
 import Effect.Aff.Class (class MonadAff)
@@ -74,14 +73,6 @@ component innerComponent = H.mkComponent
           (Slots iQuery iOutput) iOutput m (Maybe a)
     handleQuery = H.query _inner unit
 
-    paperColor :: Color
-    paperColor = rgb 0xd9 0xd9 0xd9
-
-    themeColor :: Color
-    themeColor = rgb 0x00 0x66 0x75
-
-    themeFont :: CSS
-    themeFont = fontFamily [ "Verdana" ] $ sansSerif :| []
 
     render
       :: State iInput

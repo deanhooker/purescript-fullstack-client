@@ -15,6 +15,7 @@ data Route
   | ChangePassword
 
 derive instance genericRoute :: Generic Route _
+derive instance eqRoute :: Eq Route
 
 routeCodec :: RouteDuplex' Route
 routeCodec = root $ sum
