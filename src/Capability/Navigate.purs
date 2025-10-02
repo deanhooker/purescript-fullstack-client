@@ -5,7 +5,7 @@ import Prelude
 import Control.Monad.Trans.Class (lift)
 import Halogen (HalogenM)
 
-class Monad m <= Navigate m route where
+class Monad m <= Navigate m route | m -> route where
   navigate :: route -> m Unit
 
 instance navigateHalogenM

@@ -7,7 +7,7 @@ import Halogen (HalogenM)
 
 data PasswordType = PasswordPermanent | PasswordTemporary
 
-class Monad m <= LogonRoute m route where
+class Monad m <= LogonRoute m route | m -> route where
   logonRoute :: PasswordType -> m route
 
 instance logonRouteHalogenM
