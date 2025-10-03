@@ -6,13 +6,15 @@ import CSS (color, white)
 import Capability.Log (class Log)
 import Capability.LogonRoute (class LogonRoute)
 import Capability.Navigate (class Navigate)
+import Component.ChangePassword as ChangePassword
 import Component.Logon as Logon
 import Component.Page as Page
-import Control.Monad.Reader.Class (class MonadAsk)
+import Control.Monad.Reader.Class (class MonadAsk, ask)
 import Data.Const (Const)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), isNothing)
 import Data.Route (Route(..))
 import Effect.Aff.Class (class MonadAff)
+import Effect.Ref as Ref
 import Env (Env)
 import Halogen as H
 import Halogen.HTML as HH
@@ -59,12 +61,15 @@ component = H.mkComponent
   } where
     render :: State -> H.ComponentHTML Action Slots m
     render { route } = case route of
-      Logon -> HH.slot _logon unit (Page.component Logon.component) unit absurd
+      Logon -> HH.slot_ _logon unit (Page.component Logon.component) unit
       Logoff -> HH.span [ HC.style $ color white ] [ HH.text "Logoff" ]
       Users _ -> HH.span [ HC.style $ color white ] [ HH.text "Users" ]
-      ChangePassword ->
-        HH.span [ HC.style $ color white ] [ HH.text "ChangePassword" ]
+      ChangePassword -> HH.slot_ _changePassword unit (Page.component ChangePassword.component) unit
 
     handleQuery :: forall a. Query a -> H.HalogenM State Action Slots Output m (Maybe a)
     handleQuery = case _ of
-      Navigate route _ -> H.modify_ _ { route = route } *> pure Nothing
+      Navigate route a -> do
+        { userRef } <- ask
+        ref <- H.liftEffect $ Ref.read userRef
+        H.modify_ _ { route = if isNothing ref then Logon else route }
+        pure $ Just a
