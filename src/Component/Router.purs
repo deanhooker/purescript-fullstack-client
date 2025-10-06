@@ -9,6 +9,7 @@ import Capability.Navigate (class Navigate)
 import Component.ChangePassword as ChangePassword
 import Component.Logon as Logon
 import Component.Page as Page
+import Component.Users as Users
 import Control.Monad.Reader.Class (class MonadAsk, ask)
 import Data.Const (Const)
 import Data.Maybe (Maybe(..), isNothing)
@@ -63,7 +64,7 @@ component = H.mkComponent
     render { route } = case route of
       Logon -> HH.slot_ _logon unit (Page.component Logon.component) unit
       Logoff -> HH.span [ HC.style $ color white ] [ HH.text "Logoff" ]
-      Users _ -> HH.span [ HC.style $ color white ] [ HH.text "Users" ]
+      Users _ -> HH.slot_ _users unit (Page.component Users.component) unit
       ChangePassword -> HH.slot_ _changePassword unit (Page.component ChangePassword.component) unit
 
     handleQuery :: forall a. Query a -> H.HalogenM State Action Slots Output m (Maybe a)
