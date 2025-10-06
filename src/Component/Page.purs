@@ -11,10 +11,11 @@ import CSS.Common (center)
 import CSS.Cursor (cursor, pointer)
 import CSS.Display (display, zIndex, position, fixed, flex)
 import CSS.Flexbox (flexDirection, row, flexStart, flexEnd, flexBasis, flexShrink, flexGrow, alignItems, justifyContent)
-import CSS.Font ( FontWeight(..), color, fontSize, fontWeight)
-import CSS.Geometry ( padding, paddingTop, paddingLeft, paddingRight, width, height, minHeight)
+import CSS.Font (FontWeight(..), color, fontSize, fontWeight)
+import CSS.Geometry (padding, paddingTop, paddingLeft, paddingRight, width, height, minHeight)
 import CSS.Property (value)
 import CSS.Size (rem, px, pct, vh)
+import CSS.Stylesheet (StyleM)
 import CSS.Text (letterSpacing)
 import CSS.Text.Shadow (textShadow)
 import Capability.Navigate (class Navigate, navigate)
@@ -45,9 +46,10 @@ component
   :: forall iQuery iInput iOutput m
   . MonadAff m
   => Navigate m Route
-  => H.Component iQuery iInput iOutput m
+  => StyleM Unit
   -> H.Component iQuery iInput iOutput m
-component innerComponent = H.mkComponent
+  -> H.Component iQuery iInput iOutput m
+component style innerComponent = H.mkComponent
   { initialState: \iInput -> { iInput }
   , render
   , eval: H.mkEval $ H.defaultEval
@@ -141,11 +143,11 @@ component innerComponent = H.mkComponent
           ]
         ]
       , HH.div [
-           HC.style do
+           HC.style $ (do
               display flex
               alignItems center
               justifyContent center
-              minHeight $ vh 90.0
+              minHeight $ vh 90.0) *> style
            ]
         [ HH.slot _inner unit innerComponent iInput Output ]
       ]

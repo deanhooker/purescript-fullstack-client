@@ -3,6 +3,9 @@ module Component.Router where
 import Prelude
 
 import CSS (color, white)
+import CSS.Flexbox (alignItems, flexStart, justifyContent, stretch)
+import CSS.Geometry (padding)
+import CSS.Size (rem)
 import Capability.Log (class Log)
 import Capability.LogonRoute (class LogonRoute)
 import Capability.Navigate (class Navigate)
@@ -62,10 +65,16 @@ component = H.mkComponent
   } where
     render :: State -> H.ComponentHTML Action Slots m
     render { route } = case route of
-      Logon -> HH.slot_ _logon unit (Page.component Logon.component) unit
+      Logon -> HH.slot_ _logon unit (defaultPage Logon.component) unit
       Logoff -> HH.span [ HC.style $ color white ] [ HH.text "Logoff" ]
-      Users _ -> HH.slot_ _users unit (Page.component Users.component) unit
-      ChangePassword -> HH.slot_ _changePassword unit (Page.component ChangePassword.component) unit
+      Users _ -> HH.slot_ _users unit (wholePage Users.component) unit
+      ChangePassword -> HH.slot_ _changePassword unit (defaultPage ChangePassword.component) unit
+      where
+        defaultPage = Page.component $ pure unit
+        wholePage = Page.component do
+          alignItems stretch
+          justifyContent flexStart
+          padding (rem 2.0) (rem 2.0) (rem 2.0) (rem 2.0)
 
     handleQuery :: forall a. Query a -> H.HalogenM State Action Slots Output m (Maybe a)
     handleQuery = case _ of

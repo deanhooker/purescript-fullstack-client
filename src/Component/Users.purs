@@ -2,6 +2,13 @@ module Component.Users where
 
 import Prelude
 
+import AppTheme (paperColor)
+import CSS.Background (backgroundColor)
+import CSS.Cursor (cursor, pointer)
+import CSS.Display (display, flex)
+import CSS.Flexbox (column, flexDirection, flexGrow, row)
+import CSS.Geometry (minWidth, paddingRight)
+import CSS.Size (rem)
 import Capability.Log (class Log, LogLevel(..), log, logEntry)
 import Capability.Navigate (class Navigate)
 import Control.Monad.Reader.Class (class MonadAsk, ask)
@@ -13,11 +20,14 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.Route (Route)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Ref as Ref
-import Entity.User (User)
+import Entity.User (User(..))
 import Env (Env)
 import Halogen (liftEffect)
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.HTML.CSS as HC
+import Halogen.HTML.Core (ClassName(..))
+import Halogen.HTML.Properties as HP
 import Utils (apiCall)
 import Web.HTML (window)
 import Web.HTML.Window (alert)
@@ -85,4 +95,29 @@ component = H.mkComponent
           alertError msg = H.liftEffect $ window >>= alert msg
 
     render :: State -> H.ComponentHTML Action Slots m
-    render { authorized, users, selectedUser } = HH.text $ "Found " <> show (length users) <> " users."
+    render { authorized, users, selectedUser } =
+      if not authorized then HH.text "NOT AUTHORIZED" else
+      HH.div [
+        HC.style do
+           display flex
+           flexDirection row
+           flexGrow 1.0
+      ]
+      [ HH.div [
+        HC.style do
+           display flex
+           flexDirection column
+           minWidth (rem 20.0)
+           paddingRight (rem 20.0)
+        ]
+        [ HH.ul_
+          (users <#> \ (User { userName }) ->
+            HH.li [
+              HP.class_ $ ClassName "list-group-item"
+            , HC.style do
+              backgroundColor paperColor
+              cursor pointer
+            ]
+            [ HH.text userName ])
+        ]
+      ]
