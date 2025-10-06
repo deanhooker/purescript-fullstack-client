@@ -67,7 +67,7 @@ component = H.mkComponent
     render { route } = case route of
       Logon -> HH.slot_ _logon unit (defaultPage Logon.component) unit
       Logoff -> HH.span [ HC.style $ color white ] [ HH.text "Logoff" ]
-      Users _ -> HH.slot_ _users unit (wholePage Users.component) unit
+      Users userName' -> HH.slot_ _users unit (wholePage Users.component) userName'
       ChangePassword -> HH.slot_ _changePassword unit (defaultPage ChangePassword.component) unit
       where
         defaultPage = Page.component $ pure unit

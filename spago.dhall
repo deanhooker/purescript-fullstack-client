@@ -22,6 +22,7 @@ You can edit this file as you like.
   , "newtype"
   , "nonempty"
   , "now"
+  , "ordered-collections"
   , "prelude"
   , "psci-support"
   , "refs"
@@ -29,6 +30,7 @@ You can edit this file as you like.
   , "routing-duplex"
   , "strings"
   , "transformers"
+  , "tuples"
   , "uuid"
   , "web-html"
   ]
