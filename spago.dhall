@@ -32,7 +32,6 @@ You can edit this file as you like.
   , "transformers"
   , "tuples"
   , "uuid"
-  , "web-html"
   ]
 , packages = ./packages.dhall
 , sources =

@@ -12,8 +12,9 @@ import CSS.Font (color)
 import CSS.Geometry (minWidth, padding, paddingBottom, paddingRight)
 import CSS.Size (pct, rem)
 import Capability.Navigate (class Navigate, navigate)
-import Component.Message as Message
 import Component.Modal as Modal
+import Component.Modal.Common as ModalCommon
+import Component.Modal.Message as Message
 import Control.Monad.Reader.Class (class MonadAsk, ask)
 import Data.Api.QueryUsers (QueryUsersFailureReason(..), QueryUsersRequest(..), QueryUsersResponse(..), QueryUsersResults(..))
 import Data.Array (fromFoldable)
@@ -197,5 +198,5 @@ component = H.mkComponent
          ]
          , (errorMessage # maybe (HH.text "") \message ->
             HH.slot _modal unit
-              (Modal.component Message.component) message Modal)
+              (Modal.component ModalCommon.errorConfig Message.component) message Modal)
       ]

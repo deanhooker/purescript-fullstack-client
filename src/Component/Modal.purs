@@ -19,32 +19,73 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties as HP
 import Type.Proxy (Proxy(..))
 
-type State iInput = { iInput :: iInput }
+type State iInput =
+  { iInput :: iInput
+  , affirmativeDisabled :: Boolean
+  , negativeDisabled :: Boolean
+  }
 
 data Output iOutput
   = Affirmative
   | Negative
   | InnerOutput iOutput
 
+data InnerOutput iOutput
+  = PassThrough iOutput
+  | EnableAffirmative
+  | DisableAffirmative
+  | EnableNegative
+  | DisableNegative
+  | CloseAffirmative
+  | CloseNegative
+
 data Action iInput iOutput
   = Input iInput
-  | Output iOutput
+  | Output (InnerOutput iOutput)
   | AffirmativeClicked
   | NegativeClicked
 
-
-type Slots iQuery iOutput = ( inner :: H.Slot iQuery iOutput Unit )
+type Slots iQuery iOutput = ( inner :: H.Slot iQuery (InnerOutput iOutput) Unit )
 
 _inner = Proxy :: Proxy "inner"
 
+type Config =
+  { affirmativeLabel :: String
+  , negativeLabel :: String
+  , displayButtons :: ButtonDisplay
+  , affirmativeDisabled :: Boolean
+  , negativeDisabled :: Boolean
+  }
+
+data ButtonDisplay
+  = DisplayBothButtons
+  | DisplayAffirmative
+  | DisplayNegative
+  | DisplayNoButtons
+
+defaultConfig :: Config
+defaultConfig =
+  { affirmativeLabel: "OK"
+  , negativeLabel: "CANCEL"
+  , displayButtons: DisplayBothButtons
+  , affirmativeDisabled: false
+  , negativeDisabled: false
+  }
+
 component :: forall iQuery iInput iOutput m
           . MonadAff m
-          => H.Component iQuery iInput iOutput m
+          => Config
+          -> H.Component iQuery iInput (InnerOutput iOutput) m
           -> H.Component iQuery iInput (Output iOutput) m
-component innerComponent = H.mkComponent
-  { initialState: \iInput -> { iInput }
+component config innerComponent = H.mkComponent
+  { initialState: \iInput ->
+     { iInput
+     , affirmativeDisabled: config.affirmativeDisabled
+     , negativeDisabled: config.negativeDisabled
+     }
   , render
   , eval: H.mkEval $ H.defaultEval
       { handleAction = handleAction
@@ -58,7 +99,14 @@ component innerComponent = H.mkComponent
                     (Slots iQuery iOutput) (Output iOutput) m Unit
     handleAction = case _ of
       Input input -> H.modify_ _ { iInput = input }
-      Output output -> H.raise $ InnerOutput output
+      Output innerOutput -> case innerOutput of
+        PassThrough output -> H.raise $ InnerOutput output
+        EnableAffirmative -> H.modify_ _ { affirmativeDisabled = false }
+        DisableAffirmative -> H.modify_ _ { affirmativeDisabled = true }
+        EnableNegative -> H.modify_ _ { negativeDisabled = false }
+        DisableNegative -> H.modify_ _ { negativeDisabled = true }
+        CloseAffirmative -> handleAction AffirmativeClicked
+        CloseNegative -> handleAction NegativeClicked
       AffirmativeClicked -> H.raise Affirmative
       NegativeClicked -> H.raise Negative
 
@@ -71,7 +119,19 @@ component innerComponent = H.mkComponent
 
     render :: State iInput
            -> H.ComponentHTML (Action iInput iOutput) (Slots iQuery iOutput) m
-    render { iInput } =
+    render { iInput, affirmativeDisabled, negativeDisabled } =
+      let { affirmativeLabel
+          , negativeLabel
+          , displayButtons
+          } = config
+          displayAffirmative = case displayButtons of
+            DisplayAffirmative -> true
+            DisplayBothButtons -> true
+            _ -> false
+          displayNegative = case displayButtons of
+            DisplayNegative -> true
+            DisplayBothButtons -> true
+            _ -> false in
       HH.div [
         HC.style do
            display flex
@@ -112,15 +172,19 @@ component innerComponent = H.mkComponent
                width (pct 100.0)
                backgroundColor paperColor
           ]
-          [ HH.button
+          [ if not displayAffirmative then HH.text "" else
+            HH.button
             [
               buttonStyle
+            , HP.disabled affirmativeDisabled
             , HE.onClick $ const AffirmativeClicked
             ]
             [ HH.text "OK" ]
-          , HH.button
+          , if not displayNegative then HH.text "" else
+            HH.button
             [
               buttonStyle
+            , HP.disabled negativeDisabled
             , HE.onClick $ const NegativeClicked
             ]
             [ HH.text "CANCEL" ]
