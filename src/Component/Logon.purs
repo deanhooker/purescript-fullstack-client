@@ -19,12 +19,14 @@ import CSS.Size (rem, px, pct, vw)
 import Capability.Log (class Log, LogLevel(..), log, logEntry)
 import Capability.LogonRoute (class LogonRoute, PasswordType(..), logonRoute)
 import Capability.Navigate (class Navigate, navigate)
+import Component.Message as Message
+import Component.Modal as Modal
 import Control.Monad.Reader.Class (class MonadAsk, ask)
 import DOM.HTML.Indexed.InputType (InputType(..))
 import Data.Api.Logon (LogonRequest(..), LogonResponse(..), LogonResults(..))
 import Data.Const (Const)
 import Data.Either (Either(..))
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.String.Common (trim)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Ref as Ref
@@ -35,22 +37,27 @@ import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Image.BookCover (bookCover)
+import Type.Proxy (Proxy(..))
 import Utils (apiCall)
-import Web.HTML (window)
-import Web.HTML.Window (alert)
 
 type Input = Unit
 type Output = Void
-type State = { userName :: String, password :: String }
+type State =
+  { userName :: String
+  , password :: String
+  , errorMessage :: Maybe String
+  }
 data Action
   = Logon
   | Input (State -> State)
+  | Modal (Modal.Output Message.Output)
 
 type Query :: ∀ k. k -> Type
 type Query = Const Void
 
-type Slots :: ∀ k. Row k
-type Slots = ()
+type Slots = ( modal :: H.Slot Message.Query (Modal.Output Message.Output) Unit )
+
+_modal = Proxy :: Proxy "modal"
 
 component
   :: ∀ m route
@@ -61,7 +68,7 @@ component
   => Log m
   => H.Component Query Input Output m
 component = H.mkComponent
-  { initialState: \_ -> { userName: "", password: "" }
+  { initialState: \_ -> { userName: "", password: "", errorMessage: Nothing }
   , render
   , eval: H.mkEval $ H.defaultEval
     { handleAction = handleAction }
@@ -77,9 +84,9 @@ component = H.mkComponent
         { userName, password } <- H.get
         logonResponse <- apiCall $ LogonRequest { userName, password }
         case logonResponse of
-          Left err -> alertError err
+          Left err -> H.modify_ _ { errorMessage = Just err }
           Right (LogonResponse LogonResultsFailure) ->
-            alertError "Invalid Logon Credentials"
+            H.modify_ _ { errorMessage = Just "Invalid Logon Credentials" }
           Right (LogonResponse
                  (LogonResultsSuccess
                   { authToken, admin, mustChangePassword })) -> do
@@ -89,12 +96,13 @@ component = H.mkComponent
             navigate <=< logonRoute $ if mustChangePassword
               then PasswordTemporary
               else PasswordPermanent
-        where
-          alertError :: String -> H.HalogenM State Action Slots Output m Unit
-          alertError msg = H.liftEffect $ window >>= alert msg
+      Modal output -> case output of
+        Modal.Affirmative -> H.modify_ _ { errorMessage = Nothing }
+        Modal.Negative -> H.modify_ _ { errorMessage = Nothing }
+        Modal.InnerOutput _ -> pure unit
 
     render :: State -> H.ComponentHTML Action Slots m
-    render { userName, password } =
+    render { userName, password, errorMessage } =
       HH.div [
         HC.style do
            display flex
@@ -202,6 +210,9 @@ component = H.mkComponent
           ]
           [ HH.text "LOGON" ]
         ]
+        , (errorMessage # maybe (HH.text "") \message ->
+            HH.slot _modal unit
+              (Modal.component Message.component) message Modal)
       ]
       where
         logonDisabled = trim userName == "" || trim password == ""

@@ -12,6 +12,8 @@ import CSS.Font (color)
 import CSS.Geometry (minWidth, padding, paddingBottom, paddingRight)
 import CSS.Size (pct, rem)
 import Capability.Navigate (class Navigate, navigate)
+import Component.Message as Message
+import Component.Modal as Modal
 import Control.Monad.Reader.Class (class MonadAsk, ask)
 import Data.Api.QueryUsers (QueryUsersFailureReason(..), QueryUsersRequest(..), QueryUsersResponse(..), QueryUsersResults(..))
 import Data.Array (fromFoldable)
@@ -34,9 +36,8 @@ import Halogen.HTML.CSS as HC
 import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Type.Proxy (Proxy(..))
 import Utils (apiCall)
-import Web.HTML (window)
-import Web.HTML.Window (alert)
 
 type Input = Maybe String
 type Output = Void
@@ -46,18 +47,21 @@ type State =
   , selectedUser :: Maybe User
   , users :: Map String User
   , initUserName :: Maybe String
+  , errorMessage :: Maybe String
   }
 
 data Action
   = Initialize
   | UserSelected User
   | SelectedUserName (Maybe String)
+  | Modal (Modal.Output Message.Output)
 
 type Query :: ∀ k. k -> Type
 type Query = Const Void
 
-type Slots :: ∀ k. Row k
-type Slots = ()
+type Slots = ( modal :: H.Slot Message.Query (Modal.Output Message.Output) Unit )
+
+_modal = Proxy :: Proxy "modal"
 
 component
   :: forall m
@@ -71,6 +75,7 @@ component = H.mkComponent
      , selectedUser: Nothing
      , users: Map.empty
      , initUserName
+     , errorMessage: Nothing
      }
   , render
   , eval: H.mkEval $ H.defaultEval
@@ -91,12 +96,13 @@ component = H.mkComponent
           when admin do
             queryResponse <- apiCall $ QueryUsersRequest { authToken }
             case queryResponse of
-              Left err -> alertError err
+              Left err -> H.modify_ _ { errorMessage = Just err }
               Right (QueryUsersResponse
                      (QueryUsersResultsFailure { reason })) ->
-                alertError $ "Query Users: " <> case reason of
-                  NotAuthorized -> "Not Authorized"
-                  NotAuthenticated -> "Not Authenticated"
+                H.modify_ _ { errorMessage = Just message } where
+                  message = "Query Users: " <> case reason of
+                    NotAuthorized -> "Not Authorized"
+                    NotAuthenticated -> "Not Authenticated"
               Right (QueryUsersResponse
                      (QueryUsersResultsSuccess
                       { users })) -> do
@@ -109,17 +115,18 @@ component = H.mkComponent
                   , selectedUser = initUserName
                                    >>= \userName -> Map.lookup userName usersMap
                   }
-        where
-          alertError :: String -> H.HalogenM State Action Slots Output m Unit
-          alertError msg = H.liftEffect $ window >>= alert msg
       UserSelected (User { userName }) -> navigate $ Route.Users $ Just userName
       SelectedUserName userName' -> do
         { users } <- H.get
         H.modify_ _ { selectedUser = userName'
           >>= \userName -> Map.lookup userName users }
+      Modal output -> case output of
+        Modal.Affirmative -> H.modify_ _ { errorMessage = Nothing }
+        Modal.Negative -> H.modify_ _ { errorMessage = Nothing }
+        Modal.InnerOutput _ -> pure unit
 
     render :: State -> H.ComponentHTML Action Slots m
-    render { authorized, users, selectedUser } =
+    render { authorized, users, selectedUser, errorMessage } =
       if not authorized then HH.text "NOT AUTHORIZED" else
       HH.div [
         HC.style do
@@ -188,4 +195,7 @@ component = H.mkComponent
            , item $ HH.text if user.admin then "Yes" else "No"
            ]
          ]
+         , (errorMessage # maybe (HH.text "") \message ->
+            HH.slot _modal unit
+              (Modal.component Message.component) message Modal)
       ]
