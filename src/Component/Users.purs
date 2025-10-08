@@ -68,8 +68,8 @@ type Query :: ∀ k. k -> Type
 type Query = Const Void
 
 type Slots =
-  ( errorModal :: H.Slot Message.Query (Modal.Output Message.Output) Unit
-  , createUserModal :: H.Slot Message.Query (Modal.Output CreateUser.Output) Unit
+  ( errorModal :: H.Slot (Modal.InnerQuery Message.Query) (Modal.Output Message.Output) Unit
+  , createUserModal :: H.Slot (Modal.InnerQuery Message.Query) (Modal.Output CreateUser.Output) Unit
   )
 
 _errorModal = Proxy :: Proxy "errorModal"
@@ -141,7 +141,9 @@ component = H.mkComponent
       CreateUserModal output -> case output of
         Modal.Affirmative -> H.modify_ _ { creatingUser = false }
         Modal.Negative -> H.modify_ _ { creatingUser = false }
-        Modal.InnerOutput _ -> pure unit
+        Modal.InnerOutput user@(User { userName }) ->
+          H.modify_ \s -> s { users = Map.insert userName user s.users
+                            , selectedUser = Just user }
 
       CreateUser -> H.modify_ _ { creatingUser = true }
 

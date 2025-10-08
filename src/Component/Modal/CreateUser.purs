@@ -8,14 +8,13 @@ import CSS.Flexbox (alignSelf, flexBasis, flexEnd, flexGrow, flexShrink, justify
 import CSS.Geometry (marginBottom, marginRight, maxHeight, padding)
 import CSS.Size (pct, rem)
 import Capability.Navigate (class Navigate, navigate)
-import Component.Modal (InnerOutput(..))
+import Component.Modal (InnerOutput(..), InnerQuery(..))
 import Component.Modal as Modal
 import Component.Modal.Common as ModalCommon
 import Component.Modal.Message as Message
 import Control.Monad.Reader.Class (class MonadAsk, ask)
 import Data.Api.CreateUser (CreateUserFailureReason(..), CreateUserRequest(..), CreateUserResponse(..), CreateUserResults(..))
 import Data.Array (filter, null)
-import Data.Const (Const)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Route (Route)
@@ -48,16 +47,15 @@ type State =
   }
 
 data Action
-  = CreateUser
-  | Input (State -> State)
+  = Input (State -> State)
   | Check (State -> State)
   | Modal (Modal.Output Message.Output)
   | RouteToLogon
 
-type Query :: forall k. k -> Type
-type Query = Const Void
+type Query = Void
 
-type Slots = ( modal :: H.Slot Message.Query (Modal.Output Message.Output) Unit )
+type Slots =
+  ( modal :: H.Slot (InnerQuery Message.Query) (Modal.Output Message.Output) Unit )
 
 _modal = Proxy :: Proxy "modal"
 
@@ -66,7 +64,7 @@ component
   . MonadAff m
   => MonadAsk Env m
   => Navigate m Route
-  => H.Component Query Input (InnerOutput Output) m
+  => H.Component (InnerQuery Query) Input (InnerOutput Output) m
 component = H.mkComponent
   { initialState: \_ ->
      { userName: ""
@@ -79,7 +77,9 @@ component = H.mkComponent
      }
   , render
   , eval: H.mkEval $ H.defaultEval
-    { handleAction = handleAction }
+    { handleAction = handleAction
+    , handleQuery = handleQuery
+    }
   }
   where
     handleAction
@@ -93,7 +93,21 @@ component = H.mkComponent
 
       Check f -> H.modify_ f
 
-      CreateUser -> do
+      Modal output -> case output of
+        Modal.Affirmative -> do
+          { postModalAction } <- H.get
+          H.modify_ _ { errorMessage = Nothing, postModalAction = Nothing }
+          postModalAction # maybe (pure unit) handleAction
+        Modal.Negative -> H.modify_ _ { errorMessage = Nothing }
+        Modal.InnerOutput _ -> pure unit
+
+      RouteToLogon -> navigate Route.Logon
+
+    handleQuery :: forall a
+                . InnerQuery Query a
+                -> H.HalogenM State Action Slots (InnerOutput Output) m (Maybe a)
+    handleQuery = case _ of
+      AffirmativeClicked a -> do
         { userName, password, admin, firstName, lastName } <- H.get
         { userRef } <- ask
         loggedOnUser' <- H.liftEffect $ Ref.read userRef
@@ -112,32 +126,29 @@ component = H.mkComponent
                 NotAuthenticated -> H.modify_ $ errorMsg' "Session has timed out"
                                     <<< _ { postModalAction = Just RouteToLogon }
                 FileIOError err -> errorMsg $ "Error on Accounts File: " <> err
-              Right (CreateUserResponse CreateUserResultsSuccess) ->
-                H.raise $ PassThrough $ User { userName
+              Right (CreateUserResponse CreateUserResultsSuccess) -> do
+                H.raise $ PassThroughOutput $ User { userName
                                              , admin
                                              , firstName
                                              , lastName
                                              , temporaryPassword: true
                                              }
+                H.raise ParentAffirmative
+        pure $ Just a
+      NegativeClicked a -> do
+        H.raise ParentAffirmative
+        pure $ Just a
+      _ -> pure Nothing
 
-      Modal output -> case output of
-        Modal.Affirmative -> do
-          { postModalAction } <- H.get
-          H.modify_ _ { errorMessage = Nothing, postModalAction = Nothing }
-          postModalAction # maybe (pure unit) handleAction
-        Modal.Negative -> H.modify_ _ { errorMessage = Nothing }
-        Modal.InnerOutput _ -> pure unit
 
-      RouteToLogon -> navigate Route.Logon
-      where
-        errorMsg' msg = _ { errorMessage = Just msg }
+    errorMsg' msg = _ { errorMessage = Just msg }
 
-        errorMsg = H.modify_ <<< errorMsg'
+    errorMsg = H.modify_ <<< errorMsg'
 
-        canCreate s = [ s.userName, s.password, s.firstName, s.lastName ]
-                      <#> trim
-                      # filter (_ == "")
-                      # null
+    canCreate s = [ s.userName, s.password, s.firstName, s.lastName ]
+                  <#> trim
+                  # filter (_ == "")
+                  # null
 
     render :: State -> H.ComponentHTML Action Slots m
     render { errorMessage } =

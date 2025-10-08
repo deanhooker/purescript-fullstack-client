@@ -19,6 +19,7 @@ import CSS.Size (rem, px, pct, vw)
 import Capability.Log (class Log, LogLevel(..), log, logEntry)
 import Capability.LogonRoute (class LogonRoute, PasswordType(..), logonRoute)
 import Capability.Navigate (class Navigate, navigate)
+import Component.Modal (InnerQuery)
 import Component.Modal as Modal
 import Component.Modal.Common as ModalCommon
 import Component.Modal.Message as Message
@@ -56,7 +57,8 @@ data Action
 type Query :: ∀ k. k -> Type
 type Query = Const Void
 
-type Slots = ( modal :: H.Slot Message.Query (Modal.Output Message.Output) Unit )
+type Slots =
+  ( modal :: H.Slot (InnerQuery Message.Query) (Modal.Output Message.Output) Unit )
 
 _modal = Proxy :: Proxy "modal"
 

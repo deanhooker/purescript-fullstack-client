@@ -35,21 +35,29 @@ data Output iOutput
   | InnerOutput iOutput
 
 data InnerOutput iOutput
-  = PassThrough iOutput
+  = PassThroughOutput iOutput
   | EnableAffirmative
   | DisableAffirmative
   | EnableNegative
   | DisableNegative
   | CloseAffirmative
   | CloseNegative
+  | ParentAffirmative
+  | ParentNegative
+
+data InnerQuery iQuery a
+  = AffirmativeClicked a
+  | NegativeClicked a
+  | PassThroughQuery iQuery a
 
 data Action iInput iOutput
   = Input iInput
   | Output (InnerOutput iOutput)
-  | AffirmativeClicked
-  | NegativeClicked
+  | AffirmativeClickedInternal
+  | NegativeClickedInternal
 
-type Slots iQuery iOutput = ( inner :: H.Slot iQuery (InnerOutput iOutput) Unit )
+type Slots iQuery iOutput =
+  ( inner :: H.Slot (InnerQuery iQuery) (InnerOutput iOutput) Unit )
 
 _inner = Proxy :: Proxy "inner"
 
@@ -79,8 +87,8 @@ defaultConfig =
 component :: forall iQuery iInput iOutput m
           . MonadAff m
           => Config
-          -> H.Component iQuery iInput (InnerOutput iOutput) m
-          -> H.Component iQuery iInput (Output iOutput) m
+          -> H.Component (InnerQuery iQuery) iInput (InnerOutput iOutput) m
+          -> H.Component (InnerQuery iQuery) iInput (Output iOutput) m
 component config innerComponent = H.mkComponent
   { initialState: \iInput ->
      { iInput
@@ -101,19 +109,23 @@ component config innerComponent = H.mkComponent
     handleAction = case _ of
       Input input -> H.modify_ _ { iInput = input }
       Output innerOutput -> case innerOutput of
-        PassThrough output -> H.raise $ InnerOutput output
+        PassThroughOutput output -> H.raise $ InnerOutput output
         EnableAffirmative -> H.modify_ _ { affirmativeDisabled = false }
         DisableAffirmative -> H.modify_ _ { affirmativeDisabled = true }
         EnableNegative -> H.modify_ _ { negativeDisabled = false }
         DisableNegative -> H.modify_ _ { negativeDisabled = true }
-        CloseAffirmative -> handleAction AffirmativeClicked
-        CloseNegative -> handleAction NegativeClicked
-      AffirmativeClicked -> H.raise Affirmative
-      NegativeClicked -> H.raise Negative
+        CloseAffirmative -> handleAction AffirmativeClickedInternal
+        CloseNegative -> handleAction NegativeClickedInternal
+        ParentAffirmative -> H.raise Affirmative
+        ParentNegative -> H.raise Negative
+      AffirmativeClickedInternal ->
+        H.tell _inner unit AffirmativeClicked
+      NegativeClickedInternal ->
+        H.tell _inner unit NegativeClicked
 
     handleQuery
       :: forall a
-      . iQuery a
+      . (InnerQuery iQuery) a
       -> H.HalogenM (State iInput) (Action iInput iOutput)
           (Slots iQuery iOutput) (Output iOutput) m (Maybe a)
     handleQuery = H.query _inner unit
@@ -178,7 +190,7 @@ component config innerComponent = H.mkComponent
             [
               buttonStyle affirmativeDisabled
             , HP.disabled affirmativeDisabled
-            , HE.onClick $ const AffirmativeClicked
+            , HE.onClick $ const AffirmativeClickedInternal
             ]
             [ HH.text affirmativeLabel ]
           , if not displayNegative then HH.text "" else
@@ -186,7 +198,7 @@ component config innerComponent = H.mkComponent
             [
               buttonStyle negativeDisabled
             , HP.disabled negativeDisabled
-            , HE.onClick $ const NegativeClicked
+            , HE.onClick $ const NegativeClickedInternal
             ]
             [ HH.text negativeLabel ]
           ]
