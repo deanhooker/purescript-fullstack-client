@@ -4,8 +4,9 @@ import Prelude hiding (top)
 
 import AppTheme (paperColor, themeColor, themeFont)
 import CSS.Background (backgroundColor)
-import CSS.Color (rgba, white)
+import CSS.Color (gray, rgba, white)
 import CSS.Common (center)
+import CSS.Cursor (cursor, notAllowed)
 import CSS.Display (display, fixed, flex, position, zIndex)
 import CSS.Flexbox (alignItems, column, flexDirection, flexEnd, justifyContent, row)
 import CSS.Font (FontWeight(..), color, fontSize, fontWeight)
@@ -175,26 +176,27 @@ component config innerComponent = H.mkComponent
           [ if not displayAffirmative then HH.text "" else
             HH.button
             [
-              buttonStyle
+              buttonStyle affirmativeDisabled
             , HP.disabled affirmativeDisabled
             , HE.onClick $ const AffirmativeClicked
             ]
-            [ HH.text "OK" ]
+            [ HH.text affirmativeLabel ]
           , if not displayNegative then HH.text "" else
             HH.button
             [
-              buttonStyle
+              buttonStyle negativeDisabled
             , HP.disabled negativeDisabled
             , HE.onClick $ const NegativeClicked
             ]
-            [ HH.text "CANCEL" ]
+            [ HH.text negativeLabel ]
           ]
         ]]
       where
-        buttonStyle = HC.style do
+        buttonStyle isDisabled = HC.style do
           themeFont
           fontWeight $ FontWeight $ value "500"
-          color white
+          color if isDisabled then gray else white
+          when isDisabled $ cursor notAllowed
           padding (rem 0.5) (rem 0.5) (rem 0.5) (rem 0.5)
           backgroundColor themeColor
           width (rem 8.0)

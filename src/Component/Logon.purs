@@ -8,7 +8,7 @@ import CSS.Border (borderRadius)
 import CSS.Box (boxShadow)
 import CSS.Color (gray, rgba, white)
 import CSS.Common (center)
-import CSS.Cursor (cursor, notAllowed, pointer)
+import CSS.Cursor (cursor, notAllowed)
 import CSS.Display (display, flex)
 import CSS.Flexbox (flexDirection, column, row, flexGrow, alignItems, justifyContent)
 import CSS.Font (FontWeight(..), color, fontSize, fontWeight)
@@ -205,7 +205,7 @@ component = H.mkComponent
                width (rem 20.0)
                height $ vw 3.0
                color if logonDisabled then gray else white
-               cursor if logonDisabled then notAllowed else pointer
+               when logonDisabled $ cursor notAllowed
           , HE.onClick $ const Logon
           , HP.disabled logonDisabled
           ]

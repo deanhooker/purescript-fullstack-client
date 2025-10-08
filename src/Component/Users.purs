@@ -2,18 +2,22 @@ module Component.Users where
 
 import Prelude
 
-import AppTheme (paperColor, selectedColor)
+import AppTheme (paperColor, selectedColor, themeColor, themeFont)
 import CSS.Background (backgroundColor)
 import CSS.Color (black, white)
+import CSS.Common (center)
 import CSS.Cursor (cursor, pointer)
 import CSS.Display (display, flex)
 import CSS.Flexbox (alignItems, column, flexBasis, flexDirection, flexGrow, flexStart, justifyContent, row)
-import CSS.Font (color)
-import CSS.Geometry (minWidth, padding, paddingBottom, paddingRight)
-import CSS.Size (pct, rem)
+import CSS.Font (FontWeight(..), color, fontSize, fontWeight)
+import CSS.Geometry (height, maxHeight, minWidth, padding, paddingBottom, paddingLeft, paddingRight, width)
+import CSS.Overflow (overflowAuto, overflowY)
+import CSS.Property (value)
+import CSS.Size (pct, px, rem)
 import Capability.Navigate (class Navigate, navigate)
 import Component.Modal as Modal
 import Component.Modal.Common as ModalCommon
+import Component.Modal.CreateUser as CreateUser
 import Component.Modal.Message as Message
 import Control.Monad.Reader.Class (class MonadAsk, ask)
 import Data.Api.QueryUsers (QueryUsersFailureReason(..), QueryUsersRequest(..), QueryUsersResponse(..), QueryUsersResults(..))
@@ -49,20 +53,27 @@ type State =
   , users :: Map String User
   , initUserName :: Maybe String
   , errorMessage :: Maybe String
+  , creatingUser :: Boolean
   }
 
 data Action
   = Initialize
   | UserSelected User
   | SelectedUserName (Maybe String)
-  | Modal (Modal.Output Message.Output)
+  | ErrorModal (Modal.Output Message.Output)
+  | CreateUserModal (Modal.Output CreateUser.Output)
+  | CreateUser
 
 type Query :: ∀ k. k -> Type
 type Query = Const Void
 
-type Slots = ( modal :: H.Slot Message.Query (Modal.Output Message.Output) Unit )
+type Slots =
+  ( errorModal :: H.Slot Message.Query (Modal.Output Message.Output) Unit
+  , createUserModal :: H.Slot Message.Query (Modal.Output CreateUser.Output) Unit
+  )
 
-_modal = Proxy :: Proxy "modal"
+_errorModal = Proxy :: Proxy "errorModal"
+_createUserModal = Proxy :: Proxy "createUserModal"
 
 component
   :: forall m
@@ -77,6 +88,7 @@ component = H.mkComponent
      , users: Map.empty
      , initUserName
      , errorMessage: Nothing
+     , creatingUser: false
      }
   , render
   , eval: H.mkEval $ H.defaultEval
@@ -121,13 +133,20 @@ component = H.mkComponent
         { users } <- H.get
         H.modify_ _ { selectedUser = userName'
           >>= \userName -> Map.lookup userName users }
-      Modal output -> case output of
+      ErrorModal output -> case output of
         Modal.Affirmative -> H.modify_ _ { errorMessage = Nothing }
         Modal.Negative -> H.modify_ _ { errorMessage = Nothing }
         Modal.InnerOutput _ -> pure unit
 
+      CreateUserModal output -> case output of
+        Modal.Affirmative -> H.modify_ _ { creatingUser = false }
+        Modal.Negative -> H.modify_ _ { creatingUser = false }
+        Modal.InnerOutput _ -> pure unit
+
+      CreateUser -> H.modify_ _ { creatingUser = true }
+
     render :: State -> H.ComponentHTML Action Slots m
-    render { authorized, users, selectedUser, errorMessage } =
+    render { authorized, users, selectedUser, errorMessage, creatingUser } =
       if not authorized then HH.text "NOT AUTHORIZED" else
       HH.div [
         HC.style do
@@ -142,7 +161,12 @@ component = H.mkComponent
            minWidth (rem 20.0)
            paddingRight (rem 2.0)
         ]
-        [ HH.ul_
+        [ HH.ul
+          [
+            HC.style do
+              maxHeight (pct 80.0)
+              overflowY overflowAuto
+          ]
           (users
            # Map.values
            # fromFoldable
@@ -159,6 +183,29 @@ component = H.mkComponent
             , HE.onClick $ const $ UserSelected user
             ]
             [ HH.text userName ])
+        , HH.div
+          [
+            HC.style do
+              display flex
+              flexDirection row
+              justifyContent center
+              paddingLeft (px 40.0)
+          ]
+          [ HH.button
+            [
+              HC.style do
+                 backgroundColor themeColor
+                 themeFont
+                 fontWeight $ FontWeight $ value "500"
+                 fontSize (rem 0.8)
+                 width (rem 8.0)
+                 height (rem 2.5)
+                 color white
+                 cursor pointer
+            , HE.onClick $ const CreateUser
+            ]
+            [ HH.text "Create User" ]
+          ]
         ]
       , selectedUser # maybe (HH.text "") \(User user) ->
          let item h = HH.div [ HC.style $ paddingBottom (rem 0.5) ] [ h ] in
@@ -197,6 +244,15 @@ component = H.mkComponent
            ]
          ]
          , (errorMessage # maybe (HH.text "") \message ->
-            HH.slot _modal unit
-              (Modal.component ModalCommon.errorConfig Message.component) message Modal)
+            HH.slot _errorModal unit
+              (Modal.component ModalCommon.errorConfig Message.component) message ErrorModal)
+         , (if creatingUser then
+              HH.slot _createUserModal unit
+                (Modal.component createUserConfig CreateUser.component) unit CreateUserModal
+                else HH.text "")
       ]
+      where
+        createUserConfig = Modal.defaultConfig
+                           { affirmativeLabel = "CREATE"
+                           , affirmativeDisabled = true
+                           }
