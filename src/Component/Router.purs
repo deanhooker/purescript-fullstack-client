@@ -2,7 +2,6 @@ module Component.Router where
 
 import Prelude
 
-import CSS (color, white)
 import CSS.Flexbox (alignItems, flexStart, justifyContent, stretch)
 import CSS.Geometry (padding)
 import CSS.Size (rem)
@@ -10,6 +9,7 @@ import Capability.Log (class Log)
 import Capability.LogonRoute (class LogonRoute)
 import Capability.Navigate (class Navigate)
 import Component.ChangePassword as ChangePassword
+import Component.Logoff as Logoff
 import Component.Logon as Logon
 import Component.Page as Page
 import Component.Users as Users
@@ -22,7 +22,6 @@ import Effect.Ref as Ref
 import Env (Env)
 import Halogen as H
 import Halogen.HTML as HH
-import Halogen.HTML.CSS as HC
 import Type.Proxy (Proxy(..))
 
 type Input = Unit
@@ -66,7 +65,7 @@ component = H.mkComponent
     render :: State -> H.ComponentHTML Action Slots m
     render { route } = case route of
       Logon -> HH.slot_ _logon unit (defaultPage Logon.component) unit
-      Logoff -> HH.span [ HC.style $ color white ] [ HH.text "Logoff" ]
+      Logoff -> HH.slot_ _logoff unit (defaultPage Logoff.component) unit
       Users userName' -> HH.slot_ _users unit (wholePage Users.component) userName'
       ChangePassword -> HH.slot_ _changePassword unit (defaultPage ChangePassword.component) unit
       where
